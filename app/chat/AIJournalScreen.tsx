@@ -23,6 +23,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Appbar } from "react-native-paper";
 import { useRoute } from "@react-navigation/native";
 import { useRouter } from "expo-router";
+import VoiceToTextButton from "./Transcription";
 
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
@@ -191,57 +192,84 @@ export default function AIJournalScreen() {
     }
   };
 
-  const handleSend = async () => {
-    if (!inputText.trim() || isLoading) return;
+const handleSend = async () => {
+  if (!inputText.trim() || isLoading) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: inputText,
-      isUser: true,
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInputText("");
-    Keyboard.dismiss();
-    setIsLoading(true);
-
-    try {
-      // Check for identity questions first
-      const cleanInput = inputText.trim().toLowerCase();
-      if (identityTriggers.some(trigger => cleanInput.includes(trigger))) {
-        addBotMessage("I'm Selene AI, an AI bot built on top of this platform Selene. I help you get detailed reports of your journals, recollect your journal points, and many more. Tell me what should I do for you?");
-        setIsLoading(false);
-        return;
-      }
-
-      const journalContext = allJournals.length > 0 
-        ? "Journal Context:\n" + allJournals.map(j => 
-            `[${j.date}] ${j.title}\n${j.content}\nTags: ${j.tags?.join(", ") || "None"}`
-          ).join("\n\n")
-        : "No journal entries available for context";
-
-      const prompt = `${journalContext}\n\nQuestion: ${inputText}\n\n` +
-        "Answer using the journal context if relevant. If not, respond politely that " +
-        "the information isn't available in the journal history.";
-
-      const chatHistory = messages.map(msg => ({
-        role: msg.isUser ? "user" : "assistant",
-        content: msg.text,
-      }));
-
-      const response = await fetchDataFromGrok([
-        ...chatHistory,
-        { role: "user", content: prompt }
-      ]);
-
-      addBotMessage(response);
-    } catch (error) {
-      console.error("Chat error:", error);
-      addBotMessage("Sorry, I encountered an error. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+  const userMessage: Message = {
+    id: Date.now().toString(),
+    text: inputText,
+    isUser: true,
   };
+
+  setMessages(prev => [...prev, userMessage]);
+  setInputText("");
+  Keyboard.dismiss();
+  setIsLoading(true);
+
+  try {
+    const cleanInput = inputText.trim().toLowerCase();
+    
+    // Handle identity questions first
+    if (identityTriggers.some(trigger => cleanInput.includes(trigger))) {
+      addBotMessage("I'm Selene AI, your journal companion. I help analyze your entries and chat naturally. How can I assist you today?");
+      setIsLoading(false);
+      return;
+    }
+
+    // Prepare journal context
+    const journalContext = allJournals.length > 0 
+      ? "JOURNAL ENTRIES:\n" + allJournals.map(j => 
+          `[${j.date}] ${j.title}\n${j.content}\nTags: ${j.tags?.join(", ") || "None"}`
+        ).join("\n\n")
+      : "No journal entries available";
+
+    // Enhanced RAG-style prompt
+    const promptTemplate = `
+You're Selene, a friendly AI journal assistant developed by Sanjid S, Ajay Cyriac, Edwin Rajesh and Jithmon P cheriyan. Follow these rules:
+1. FIRST check if the question relates to journal entries using the CONTEXT below
+2. For journal-related queries, answer using the CONTEXT
+3. For general questions, answer naturally while maintaining journal-focused personality
+4. If CONTEXT exists, try to connect answers to journal insights when relevant
+5. Never mention "journal entries" unless asked
+6. Always be helpful and maintain conversational tone
+
+CONTEXT:
+${journalContext}
+
+QUESTION: ${inputText}
+
+ANSWER IN FRIENDLY, CONVERSATIONAL STYLE:`;
+
+    // based on examples preparedchat history
+    const messagesPayload = [
+      { role: "system", content: promptTemplate },
+      ...messages.slice(-3).map(msg => ({
+        role: msg.isUser ? "user" : "assistant",
+        content: msg.text
+      })),
+      { role: "user", content: inputText }
+    ];
+
+    // added example dialoges
+    messagesPayload.unshift(
+      { role: "user", content: "How was I feeling last week?" },
+      { role: "assistant", content: "Your entries from March 10-17 show you were excited about the new project but mentioned needing more sleep." },
+      { role: "user", content: "What's the capital of France?" },
+      { role: "assistant", content: "The capital is Paris! By the way, your 2020 journal mentions wanting to visit there someday." },
+      { role: "user", content: "Tell me a joke" },
+      { role: "assistant", content: "Why did the journal refuse therapy? It already had too many resolved entries! "}
+    );
+
+    const response = await fetchDataFromGrok(messagesPayload);
+    addBotMessage(response);
+
+  } catch (error) {
+    console.error("Chat error:", error);
+    addBotMessage("Sorry, I encountered an error. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const addBotMessage = (text: string) => {
     const botMessage: Message = {
@@ -353,6 +381,7 @@ export default function AIJournalScreen() {
           multiline
           editable={!isLoading}
         />
+        <VoiceToTextButton onTranscription={setInputText} />
         <TouchableOpacity 
           style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.disabledButton]}
           onPress={handleSend}
@@ -445,8 +474,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     backgroundColor: "white",
     borderRadius: 15,
+    height: 60,
     elevation: 3,
     paddingHorizontal: 10,
+    gap: 8,
   },
   input: {
     flex: 1,
@@ -473,7 +504,7 @@ const styles = StyleSheet.create({
   },
   generateButton: {
     position: "absolute",
-    bottom: 70,
+    bottom: 90,
     alignSelf: "center",
     backgroundColor: lightColors.primary,
     paddingVertical: 14,

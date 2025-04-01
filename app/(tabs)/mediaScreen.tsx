@@ -12,7 +12,7 @@ import {
   TextInput
 } from "react-native";
 import { FIRESTORE_DB, FIREBASE_AUTH } from "@/FirebaseConfig";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 import { Video } from "expo-av";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,7 +23,7 @@ const MediaScreen1 = () => {
   const [rawMediaList, setRawMediaList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
-  // We track the section and overall (flattened) item index for the modal
+  // Track the section and overall (flattened) item index for the modal
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,19 +38,21 @@ const MediaScreen1 = () => {
     return result;
   };
 
-  // Group media items by uploadDate and filter by tag search
+  // Group media items by uploadDate and filter based on tags, journal title, or date.
   const groupMediaItems = (mediaList: any[]) => {
-    // If a search query exists, filter by tag matching.
-    // Here we assume that each media item may have a tags property (an array of strings).
+    // Filter based on search query if provided.
+    // It will check if the query is found in any tag, the upload date, or the journal title.
     const filtered = searchQuery
-      ? mediaList.filter((item) =>
-          item.tags &&
-          item.tags.some((tag: string) =>
-            tag.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-        )
+      ? mediaList.filter((item) => {
+          const query = searchQuery.toLowerCase();
+          const hasMatchingTag = item.tags && item.tags.some((tag: string) => tag.toLowerCase().includes(query));
+          const hasMatchingDate = item.uploadDate && item.uploadDate.toLowerCase().includes(query);
+          const hasMatchingTitle = item.journalTitle && item.journalTitle.toLowerCase().includes(query);
+          return hasMatchingTag || hasMatchingDate || hasMatchingTitle;
+        })
       : mediaList;
-    // Group media items by uploadDate
+
+    // Group filtered media items by uploadDate
     const grouped = filtered.reduce((acc, item) => {
       const date = item.uploadDate;
       if (!acc[date]) {
@@ -74,47 +76,46 @@ const MediaScreen1 = () => {
   };
 
   useEffect(() => {
-    const fetchMedia = async () => {
-      if (!userId) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const journalsRef = collection(FIRESTORE_DB, "users", userId, "journals");
-        const snapshot = await getDocs(journalsRef);
-        const mediaList: any[] = [];
-        snapshot.forEach((docSnapshot) => {
-          const data = docSnapshot.data();
-          const uploadDate = data.date || "Unknown Date";
-          // Incorporate the journal-level tags (if any) into each media item
-          const entryTags = data.tags || [];
-          if (data.media && Array.isArray(data.media)) {
-            data.media.forEach((item: any) => {
-              mediaList.push({ 
-                ...item, 
-                journalId: docSnapshot.id, 
-                uploadDate, 
-                tags: entryTags 
-              });
-            });
-          }
-        });
-        // Save the full unfiltered media list
-        setRawMediaList(mediaList);
-        // Group and set media sections initially
-        const sections = groupMediaItems(mediaList);
-        setMediaSections(sections);
-      } catch (error) {
-        console.error("Error fetching media: ", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
-    fetchMedia();
+    // Listen for real-time updates using onSnapshot
+    const journalsRef = collection(FIRESTORE_DB, "users", userId, "journals");
+    const unsubscribe = onSnapshot(journalsRef, (snapshot) => {
+      const mediaList: any[] = [];
+      snapshot.forEach((docSnapshot) => {
+        const data = docSnapshot.data();
+        const uploadDate = data.date || "Unknown Date";
+        const entryTags = data.tags || [];
+        // Attach the journal title so we can search by title later
+        const journalTitle = data.title || "";
+        if (data.media && Array.isArray(data.media)) {
+          data.media.forEach((item: any) => {
+            mediaList.push({ 
+              ...item, 
+              journalId: docSnapshot.id, 
+              uploadDate, 
+              tags: entryTags,
+              journalTitle
+            });
+          });
+        }
+      });
+      setRawMediaList(mediaList);
+      const sections = groupMediaItems(mediaList);
+      setMediaSections(sections);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error listening to journal updates: ", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [userId]);
 
-  // Update media sections when the search query or raw media list changes.
+  // Re-group media items when search query or raw media list changes.
   useEffect(() => {
     const sections = groupMediaItems(rawMediaList);
     setMediaSections(sections);
@@ -161,7 +162,7 @@ const MediaScreen1 = () => {
   // Render a row of media items (each row is an array of up to 3 items)
   const renderMediaRow = ({ item, index, section }: any) => {
     const { width } = Dimensions.get("window");
-    // For a container with padding, calculate item size so that 3 items fit in one row.
+    // Calculate item size so that 3 items fit in one row.
     const itemSize = (width - 40) / 3;
     return (
       <View style={styles.row}>
@@ -244,7 +245,7 @@ const MediaScreen1 = () => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by tag..."
+          placeholder="Search by date, tag or journal title..."
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholderTextColor="#888"
@@ -297,7 +298,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     padding: 20,
     fontFamily: "firamedium",
-    color: "#001011",
+    color: "teal",
     textAlign: "center",
   },
   searchContainer: {

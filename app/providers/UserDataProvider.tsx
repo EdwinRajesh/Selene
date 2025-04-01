@@ -1,14 +1,27 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { FIREBASE_AUTH, FIRESTORE_DB } from '@/FirebaseConfig';
-import { collection, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot, getDoc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { JournalEntry } from '@/src/constants/Types'; // Adjust the import path as necessary
+import { JournalEntry } from '@/src/constants/Types'; // Adjust import path if needed
+
+// Define types for user data
+interface UserProfile {
+  name: string;
+  email: string;
+}
+
+interface UserDataContextType {
+  userProfile: UserProfile | null;
+  userData: JournalEntry[] | null;
+  deleteJournal: (id: string) => void;
+}
 
 // Create Context
-const UserDataContext = createContext<{ userData: JournalEntry[] | null; deleteJournal: (id: string) => void } | null>(null);
+const UserDataContext = createContext<UserDataContextType | null>(null);
 
 export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(FIREBASE_AUTH.currentUser);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userData, setUserData] = useState<JournalEntry[] | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +35,26 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribeAuth();
   }, []);
 
-  // Fetch journal data once user is available
+  // Fetch user profile info (name & email)
+  useEffect(() => {
+    if (!user || loading) return;
+
+    const userDocRef = doc(FIRESTORE_DB, 'users', user.uid);
+    const fetchUserProfile = async () => {
+      try {
+        const docSnap = await getDoc(userDocRef);
+        if (docSnap.exists()) {
+          setUserProfile(docSnap.data() as UserProfile);
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user, loading]);
+
+  // Fetch journal data from subcollection
   useEffect(() => {
     if (!user || loading) return;
 
@@ -47,8 +79,6 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       try {
         const journalRef = doc(FIRESTORE_DB, 'users', user.uid, 'journals', id);
         await deleteDoc(journalRef);
-
-        // Optimistically update the UI
         setUserData((prevData) => prevData?.filter((entry) => entry.id !== id) || null);
       } catch (error) {
         console.error("Error deleting journal:", error);
@@ -57,7 +87,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <UserDataContext.Provider value={{ userData, deleteJournal }}>
+    <UserDataContext.Provider value={{ userProfile, userData, deleteJournal }}>
       {children}
     </UserDataContext.Provider>
   );
