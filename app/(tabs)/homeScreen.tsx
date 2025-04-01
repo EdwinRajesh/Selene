@@ -40,14 +40,16 @@ const HomeScreen = () => {
       <View style={styles.quoteContainer}>
         <DailyQuote date={selectedDate} />
       </View>
+      
+      <View>
+        <JournalsComponent entries={filteredEntries} />
+      </View>
       <View style={styles.row}>
+        
+        <TasksComponent selectedDate={selectedDate} />
         <TouchableOpacity onPress={() => router.push('/chat/AIJournalScreen')}>
         <ChatBotButton />
         </TouchableOpacity>
-        <TasksComponent selectedDate={selectedDate} />
-      </View>
-      <View>
-        <JournalsComponent entries={filteredEntries} />
       </View>
     </View>
   );

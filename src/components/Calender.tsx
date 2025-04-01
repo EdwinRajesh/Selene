@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView, Text, StyleSheet, Dimensions } from 'react-native';
-import DateComponent from './Date'; // Adjust the import path as necessary
+import { View, ScrollView, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import DateComponent from './Date'; 
 import moment from 'moment';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 
 interface CalendarProps {
   selectedDate: string;
@@ -12,6 +15,7 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onSelectDate }) => {
   const [dates, setDates] = useState<Date[]>([]);
   const [month, setMonth] = useState<string>(moment().format('MMMM YYYY'));
   const scrollViewRef = useRef<ScrollView>(null);
+  const router = useRouter(); // Navigation hook
 
   useEffect(() => {
     const startOfMonth = moment().subtract(1, 'month').startOf('month'); // Start from previous month
@@ -52,7 +56,12 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onSelectDate }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.monthText}>{month}</Text>
+      <View style={styles.header}>
+        <Text style={styles.monthText}>{month}</Text>
+        <TouchableOpacity onPress={() => router.push('/Profile')}>
+          <Ionicons name="person-circle-outline" size={40} color="black" />
+        </TouchableOpacity>
+      </View>
       <View style={styles.scroll}>
         <ScrollView
           ref={scrollViewRef}
@@ -79,13 +88,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between', // Pushes items to the edges
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 16,
+  },
   monthText: {
     fontSize: 18,
     fontWeight: 'bold',
-    textAlign: 'left',
-     alignSelf: 'flex-start', marginLeft: 16 ,
     fontFamily: 'firabold',
-    marginBottom: 5,
   },
   scroll: {
     flexDirection: 'row',
