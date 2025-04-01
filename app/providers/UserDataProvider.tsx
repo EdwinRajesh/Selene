@@ -14,6 +14,7 @@ interface UserDataContextType {
   userProfile: UserProfile | null;
   userData: JournalEntry[] | null;
   deleteJournal: (id: string) => void;
+  updateJournal: (id: string, updatedData: Partial<JournalEntry>) => void;
 }
 
 // Create Context
@@ -85,9 +86,15 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       }
     }
   };
+  const updateJournal = (id, updatedData) => {
+    setUserData(prevData =>
+      prevData.map(entry => (entry.id === id ? { ...entry, ...updatedData } : entry))
+    );
+  };
+  
 
   return (
-    <UserDataContext.Provider value={{ userProfile, userData, deleteJournal }}>
+    <UserDataContext.Provider value={{ userProfile, userData, deleteJournal,updateJournal }}>
       {children}
     </UserDataContext.Provider>
   );

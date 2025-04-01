@@ -73,7 +73,11 @@ const JournalDisplay = () => {
   </TouchableOpacity>
   <Text style={styles.title}>Journal Entry</Text>
   <View style={{ flex: 1 }} />
-  <TouchableOpacity onPress={() => {}} style={styles.appBarButton}>
+  <TouchableOpacity onPress={() => {
+    router.push(`/journals/EditJournal?id=${id}`);
+  }
+    
+  } style={styles.appBarButton}>
     <Ionicons name="create-outline" size={32} color={lightColors.accent} />
   </TouchableOpacity>
 </View>
@@ -120,13 +124,13 @@ const JournalDisplay = () => {
               <View style={styles.audioContainer}>
                 <TouchableOpacity onPress={playAudio} style={styles.audioButton}>
                   <Ionicons name="play-circle" size={30} color={lightColors.primary} />
-                  <Text style={styles.buttonText}>Play Audio</Text>
+                  <Text style={styles.audioText}>Play Audio</Text>
                 </TouchableOpacity>
 
                 {sound && (
                   <TouchableOpacity onPress={stopAudio} style={styles.audioButton}>
                     <Ionicons name="stop-circle" size={30} color="red" />
-                    <Text style={styles.buttonText}>Stop</Text>
+                    <Text style={styles.audioText}>Stop</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -237,6 +241,12 @@ const styles = StyleSheet.create({
     backgroundColor:lightColors.error,
     padding: 10,
     borderRadius: 10,
+  },
+  audioText: {
+    fontSize: 16,
+    marginLeft: 5,
+    fontFamily: 'firaregular',
+    color: lightColors.accent,	
   },
   buttonText: {
     fontSize: 16,

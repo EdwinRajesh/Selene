@@ -24,7 +24,7 @@ const JournalsComponent = ({ entries }) => {
             >
               <Text style={styles.journalTitle}>{item.title}</Text>
               <Text style={styles.journalContent}>
-              {item.content.length > 150 ? `${item.content.substring(0, 150)}...` : item.content}
+              {item.content.length > 120 ? item.content.substring(0, 120) + '...' : item.content}
               </Text>
               {item.tags && item.tags.length > 0 && (
             <View style={styles.tagsContainer}>
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   },
   journalTitle: {
     color: lightColors.primary,
-    fontSize: 26,
+    fontSize: 20,
     fontFamily: 'firabold',
   },
   journalContent: {

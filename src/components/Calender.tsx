@@ -5,6 +5,7 @@ import moment from 'moment';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
+import lightColors from '../constants/Colors';
 
 interface CalendarProps {
   selectedDate: string;
@@ -59,7 +60,9 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onSelectDate }) => {
       <View style={styles.header}>
         <Text style={styles.monthText}>{month}</Text>
         <TouchableOpacity onPress={() => router.push('/Profile')}>
-          <Ionicons name="person-circle-outline" size={40} color="black" />
+          <View style={styles.iconContainer}>
+            <Ionicons name="person" size={24} color="white" />
+          </View>
         </TouchableOpacity>
       </View>
       <View style={styles.scroll}>
@@ -102,6 +105,14 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexDirection: 'row',
+  },
+  iconContainer: {
+    width: 40, // Adjust size as needed
+    height: 40, // Adjust size as needed
+    borderRadius: 20, // Half of width/height to make it circular
+    backgroundColor: lightColors.primary, // Optional: Add a background color
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

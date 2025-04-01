@@ -48,6 +48,8 @@ const MediaScreen1 = () => {
           const hasMatchingTag = item.tags && item.tags.some((tag: string) => tag.toLowerCase().includes(query));
           const hasMatchingDate = item.uploadDate && item.uploadDate.toLowerCase().includes(query);
           const hasMatchingTitle = item.journalTitle && item.journalTitle.toLowerCase().includes(query);
+          const hasMatchingContent = item.uploadDate && item.uploadDate.toLowerCase().includes(query);
+
           return hasMatchingTag || hasMatchingDate || hasMatchingTitle;
         })
       : mediaList;

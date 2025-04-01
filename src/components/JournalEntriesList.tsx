@@ -25,13 +25,13 @@ const JournalEntriesList: React.FC<JournalEntriesListProps> = ({ entries }) => {
       <Text style={styles.journalContent} numberOfLines={2}>{item.content}</Text>
 
       {/* Images - Display as small thumbnails */}
-      {item.images?.length > 0 && (
+      {/* {item.images?.length > 0 && (
         <View style={styles.imagesContainer}>
           {item.images.map((image, index) => (
             <Image key={index} source={{ uri: image }} style={styles.journalImage} />
           ))}
         </View>
-      )}
+      )} */}
 
       {/* Tags */}
       {item.tags?.length > 0 && (
