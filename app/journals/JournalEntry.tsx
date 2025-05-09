@@ -82,7 +82,7 @@ const JournalEntryPage = () => {
   const [isTranscribing, setIsTranscribing] = useState(false);
 
   // Create a Hugging Face inference client with your token
-  const hfClient = new HfInference("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");
+  const hfClient = new HfInference("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");
 
   // Listen for keyboard visibility
   useEffect(() => {
